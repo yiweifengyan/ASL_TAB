@@ -1,72 +1,127 @@
-# TAB PyTorch Extension
+# ASL Spring 2024 Course Project: TAB Conv2d Optimization
 
-TAB series Ternary And Binary convolution and quantization functions on ARM and x86 CPU and Nvidia GPU.
+This is the baseline of TAB series Ternary And Binary convolution and quantization functions. It has been verified on MSVC/Windows with a X86 CPU, and probably works well on GCC/Linux and ARM CPU.
+
+It serves as a starting point. You can modify any part of it and add your own optimized versions, or reimplement all functions on your own.
 
 ## File Organization
-#### CUDA Version
- - Setup_GPU.py: the installation file of PyTorch Extension
- - TAB_GPU.cpp: the interface file that wraps the cuda functions
- - TAB_GEMM.cuh: the head file 
- - TAB_GEMM.cu:  the source file contains all the cuda functions
-#### CPU Version
- - Setup_GCC.py: Setup on x86-x64 CPU with GCC 
- - Setup_MSVC.py: Setup on x86-x64 CPU with MSVC
- - Setup_ARM.py: Setup on ARM CPU with GCC
- - libpopcntARM.h: The headfile with dedicated popcnt kernels on ARM CPU
- - TAB_CPU.h: The haedfile of CPU functions
- - TAB_CPU.cpp: The CPU functions
 
-## Install and demo
-Taking the CUDA version as example
- - Run this command in conda: " python Setup_GPU.py install "
- - Try it out in the " TAB Demo GPU.ipynb "
+- common.h: the common libraries and global const values (Change the popcnt intrinsic functions here)
+- main.cpp: including a verify function and a benchmark function.
+  - Verify(): all conv functions must pass the test cases to ensure code correctness.
+  - Benchmark(): then you can benchmark the conv functions.
+- TAB_CPU.h
+- TAB_CPU.cpp: The integrated conv function
+  - TAB_Conv(): integrate **Quantize - Img2Row/Col - Bitwise GEMM - PReLU** into one function.
+- Quantize.h
+- Quantize.cpp
+  - Ternarize_NCHW_to_NHWCB(): Ternarize the input tensor and reshape it from NCHW to NHWCB.
+  - Binarize_NCHW_to_NHWC(): Binarize the input tensor and reshape it from NCHW to NHWC.
+  - BTN_CNT_W2(): BTN counts the Weight Bit2 with weight quantization.
+- Img2Row.h
+  - Img2Row_NHWCB_to_N_OHOW_KHKWC(): Reshape the 5-dimension NHWCB tensor into a 3-dimension N_OHxOW_KHxKWxC tensor.
+- GEMM.h
+- GEMM.cpp
+  - TNNGEMM_baseline(): Bitwise GEMM in TNN
+  - TBNGEMM_baseline()
+  - BTNGEMM_baseline()
+  - BNNGEMM_baseline()
+- Activation.h
+  - PReLU(): A simple paramiterized leaky ReLU function
+- utility.h
+  - DirectPad(): The direct padding function for standard 32-bit float conv
+  - DirectConv2d_FP32(): The direct conv function provides the reference correct conv results.
+  - generate_array(): Generate ternary or binary tensors for Verify().
+  - Compare_Tensor_NHWC(): Compare the conv result tensor for Verify().
+  - Compare_Tensor_BNN_Padding(): Compare the conv result tensor for Binary input (BNN & BTN). Zero padding is ineffective on binary (-1, +1) input activations, so this function only compares the central part of output tensor excluding the padding part.
 
-## Working Configuration 
-The CUDA and MSVC version 
+### Tensor Shapes
+
+Activation X
+
+- Input: N, C, H, W (N is Batch_Size)
+- Ternaize/Binarize: NHWCB: N, H + 2 * PaddingH, W + 2 * PaddingW, C/64, BITS (C and B can be fused together)
+- Img2Row/Img2Col: N_OHOW_KNKWC: N, OH * OW, KH * kW * C * BITS. (C and BITS are fused. This C has been quantized)
+- GEMM: MK: N * OH * OW, KH * kW * C * BITS.
+
+Weights W
+
+- Initial: KN, C, KH, KW
+- Ternarize/Binarize: NHWCB: KN, KH, KW, C/64, BITS
+- GEMM: NK: KN, KH * KW * C * BITS (This C has been quantized)
+
+Result Y
+
+- GEMM output: N, OH, OW, OC (Output Channel = KN)
+- PReLU: N, OH, OW, OC
+
+## First-try
+
+### Setup
+
+- Change the popcnt64() intrinsic in common.h for GCC/Clang
+- Open the .sln in MSVC, or add a makefile for GCC/Clang
+- Compile and run it
+
+The bitwise GEMM use popcnt instructions to accelerate quantized convolution. The excution speed will be very slow if current CPU don't have population count instructions.
+
+Intrinsic references:
+
+- [MSVC Compiler intrinsics](https://learn.microsoft.com/en-us/cpp/intrinsics/compiler-intrinsics)
+- [MSVC popcnt](https://learn.microsoft.com/en-us/cpp/intrinsics/popcnt16-popcnt-popcnt64): __popcnt64
+- [GCC Compiler builtin](https://gcc.gnu.org/onlinedocs/gcc/Other-Builtins.html), and in the same page
+- GCC popcnt: int __builtin_popcountll (unsigned long long)
+- [Clang popcnt](https://clang.llvm.org/doxygen/popcntintrin_8h_source.html)
+- [Intel instrinsic guide](https://www.intel.com/content/www/us/en/docs/intrinsics-guide/index.html)
+- [ARM intrinsics whole list](https://developer.arm.com/architectures/instruction-sets/intrinsics/)
+
+### Tested Configuration
+
+The MSVC/X86_64 version 
  - Windows 10
- - CUDA 11.1 on RTX-3080
- - PyTorch 1.8.1 
- - Conda Python version: 3.8.5
- - MS Visual Studio Community 2019
+ - MS Visual Studio Community 2022
 
- 
-The ARM version
- - Rpi 400 with Rasberry Pi OS
- - GCC 8.3.0
+The compiler flags in old TAB versions for reference
+- MSVC + X86 CPU w/ AVX512: '/arch:AVX2 /Ot'
+- GCC + ARM CPU w/ Neon: '-flax-vector-conversions -march=armv8-a+simd -mfpu=neon -funsafe-math-optimizations -fbuiltin -O3'
 
-## API Details
+### Example ececution results
 
- - TAB_Qunatize(torch::Tensor X, torch::Tensor thresholds, int bitwidth, int N, int H, int W, int C)
-   - It returns two tensors: quantized QX, the pre-calculated popcnt(W2) of BTN: BTN_W
-
-// Quantize the input x to be {+1, 0 -1} or {+1, -1}  
-// Input:  
-//   x: the data to be quantized, using N_H_W_C data format  
-//   ths: the threshold values of each filter or each input image or each activation  
-//   bit-width: determins whether this is Ternarization or Binarization  
-//   N: batch size or filter number, C: Channel, H: Height, W: Width  
-// Output:  
-//   qx: the quantized x, using N, C, H, W, B format  
-//   btn: the pre-calculated popcnt(W2) of BTN  
-
- - TAB_Conv2d(torch::Tensor X, torch::Tensor QW, torch::Tensor thresholds, torch::Tensor btn, int type, int padding1, int padding2, int stride1, int stride2, int N, int H, int W, int C, int KN, int KH, int KW)
-   - type code: 0: TNN, 1: TBN, 2: BTN, 3: BNN
-   - btn is the pre-calculated  popcnt(W2) of BTN
-   - It returns the output feature maps just as normal Conv2d functions in PyTorch
-
-// The convolution function interface of TAB series TNN, TBN, BTN and BNN  
-// Input:   
-//   X: input activation  
-//   QW: quantized weights  
-//   ths: the thredhols values of each activation. length = N = batch size  
-//   btn: the pre-calculated popcnt(W2) of BTN   
-//   type: show the conv type. 0: TNN, 1, TBN, 2: BTN, 3: BNN  
-//   padding1: the padding around Height  
-//   padding2: the padding around Width  
-//   stride1: the stride on Height  
-//   stride2: the stride on Width  
-//   N: batch size, C, channel, H: Height, W: Width  
-//   KN: number of filters/kernels, KH: Kernel Height, KW, Kernel Width   
-// Output:  
-//   y: convolution result  
-
+```
+Test Case 0 kernel: 3X3 TAB_TNN Passed!
+Test Case 0 kernel: 3X3 TAB_TBN Passed!
+Test Case 0 kernel: 3X3 TAB_BTN Passed!
+Test Case 0 kernel: 3X3 TAB_BNN Passed!
+Test Case 1 kernel: 1X1 TAB_TNN Passed!
+Test Case 1 kernel: 1X1 TAB_TBN Passed!
+Test Case 1 kernel: 1X1 TAB_BTN Passed!
+Test Case 1 kernel: 1X1 TAB_BNN Passed!
+Test Case 2 kernel: 1X1 TAB_TNN Passed!
+Test Case 2 kernel: 1X1 TAB_TBN Passed!
+Test Case 2 kernel: 1X1 TAB_BTN Passed!
+Test Case 2 kernel: 1X1 TAB_BNN Passed!
+Test Case 3 kernel: 3X3 TAB_TNN Passed!
+Test Case 3 kernel: 3X3 TAB_TBN Passed!
+Test Case 3 kernel: 3X3 TAB_BTN Passed!
+Test Case 3 kernel: 3X3 TAB_BNN Passed!
+...
+Test Case 8 kernel: 1X1 TAB_BNN Passed!
+Test Case 0 TAB_TNN Input NCHW=16,64,56,56, kernel: 64,64,3,3, y_size = 3211264 Average execution time 30962860 ns
+Test Case 0 TAB_TBN Input NCHW=16,64,56,56, kernel: 64,64,3,3, y_size = 3211264 Average execution time 30888630 ns
+Test Case 0 TAB_BTN Input NCHW=16,64,56,56, kernel: 64,64,3,3, y_size = 3211264 Average execution time 30909680 ns
+Test Case 0 TAB_BNN Input NCHW=16,64,56,56, kernel: 64,64,3,3, y_size = 3211264 Average execution time 31426060 ns
+Test Case 1 TAB_TNN Input NCHW=16,64,56,56, kernel: 128,64,3,3, y_size = 6422528 Average execution time 50741800 ns
+Test Case 1 TAB_TBN Input NCHW=16,64,56,56, kernel: 128,64,3,3, y_size = 6422528 Average execution time 50860390 ns
+Test Case 1 TAB_BTN Input NCHW=16,64,56,56, kernel: 128,64,3,3, y_size = 6422528 Average execution time 50583730 ns
+Test Case 1 TAB_BNN Input NCHW=16,64,56,56, kernel: 128,64,3,3, y_size = 6422528 Average execution time 51339730 ns
+Test Case 2 TAB_TNN Input NCHW=16,128,28,28, kernel: 128,128,3,3, y_size = 1605632 Average execution time 23153320 ns
+Test Case 2 TAB_TBN Input NCHW=16,128,28,28, kernel: 128,128,3,3, y_size = 1605632 Average execution time 23116640 ns
+Test Case 2 TAB_BTN Input NCHW=16,128,28,28, kernel: 128,128,3,3, y_size = 1605632 Average execution time 23273820 ns
+Test Case 2 TAB_BNN Input NCHW=16,128,28,28, kernel: 128,128,3,3, y_size = 1605632 Average execution time 23153430 ns
+Test Case 3 TAB_TNN Input NCHW=16,128,28,28, kernel: 256,128,3,3, y_size = 3211264 Average execution time 41445580 ns
+Test Case 3 TAB_TBN Input NCHW=16,128,28,28, kernel: 256,128,3,3, y_size = 3211264 Average execution time 41529490 ns
+Test Case 3 TAB_BTN Input NCHW=16,128,28,28, kernel: 256,128,3,3, y_size = 3211264 Average execution time 41525410 ns
+Test Case 3 TAB_BNN Input NCHW=16,128,28,28, kernel: 256,128,3,3, y_size = 3211264 Average execution time 41495590 ns
+...
+Test Case 19 TAB_BNN Input NCHW=16,16000,1,1, kernel: 32000,16000,1,1, y_size = 512000 Average execution time 361291720 ns
+```
