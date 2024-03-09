@@ -6,12 +6,14 @@ It serves as a starting point. You can modify any part of it and add your own op
 
 ## File Organization
 
-- common.h: the common libraries and global const values (Change the popcnt intrinsic functions here)
-- main.cpp: including a verify function and a benchmark function.
+- common.h
+  - The common libraries and global const values (Change the popcnt intrinsic functions here)
+- main.cpp
   - Verify(): all conv functions must pass the test cases to ensure code correctness.
   - Benchmark(): then you can benchmark the conv functions.
 - TAB_CPU.h
-- TAB_CPU.cpp: The integrated conv function
+- TAB_CPU.cpp
+  - The integrated conv function
   - TAB_Conv(): integrate **Quantize - Img2Row/Col - Bitwise GEMM - PReLU** into one function.
 - Quantize.h
 - Quantize.cpp
@@ -37,23 +39,43 @@ It serves as a starting point. You can modify any part of it and add your own op
 
 ### Tensor Shapes
 
+GEMM matrix shapes 
+
+- GEMM input a: MK
+- GEMM input b: NK
+- GEMM result y: MN
+
+As the tensors in conv usually have 4 or 5 dimensions, the Conv-to-GEMM may use equivalent dimension transformation for tensor reshaping. So GEMM part only conducts the bitwise GEMM in a classical manner, and its implementation is decoupled from the convolution workflow. Sorry that GEMM uses MNK for dimension representation, these N and K are different/independent from the N and Kxx in the following convolution workflow.
+
 Activation X
 
-- Input: N, C, H, W (N is Batch_Size)
-- Ternaize/Binarize: NHWCB: N, H + 2 * PaddingH, W + 2 * PaddingW, C/64, BITS (C and B can be fused together)
-- Img2Row/Img2Col: N_OHOW_KNKWC: N, OH * OW, KH * kW * C * BITS. (C and BITS are fused. This C has been quantized)
-- GEMM: MK: N * OH * OW, KH * kW * C * BITS.
+- Input: N, C, H, W
+  - N is Batch_Size, Channel, Height, Width
+- After Ternaize/Binarize: N, H, W, C, Bit
+  -  N, H + 2 * PaddingH, W + 2 * PaddingW, C/64, BITS (C and B can be fused together)
+- After Img2Row/Img2Col: N_OHOW_KNKWC
+  - N, OH * OW, KH * kW * C * BITS. (C and BITS are fused. This C has been quantized)
+- In GEMM: 2-Dimension (MK)
+  -  N * OH * OW, KH * kW * C * BITS
+  -  (As GEMM input a: M = N * OH * OW, K = KH * kW * C * BITS)
 
 Weights W
 
 - Initial: KN, C, KH, KW
-- Ternarize/Binarize: NHWCB: KN, KH, KW, C/64, BITS
-- GEMM: NK: KN, KH * KW * C * BITS (This C has been quantized)
+- After Ternarize/Binarize: NHWCB
+  - KN, KH, KW, C/64, BITS
+- In GEMM: 2-Dimension (NK)
+  - KN, KH * KW * C * BITS (This C has been quantized)
+  - (As GEMM input b: N = KN, K = KH * KW * C * BITS)
 
 Result Y
 
-- GEMM output: N, OH, OW, OC (Output Channel = KN)
+- GEMM output: 2-Dimension (MN) = 4-Dimension (N, OH, OW, OC)
+  - N * OH * OW, OC (As GEMM output y)
+  - Can be viewed as N, OH, OW, OC (Output Channel = KN)
 - PReLU: N, OH, OW, OC
+
+
 
 ## First-try
 
@@ -82,7 +104,7 @@ The MSVC/X86_64 version
  - MS Visual Studio Community 2022
 
 The compiler flags in old TAB versions for reference
-- MSVC + X86 CPU w/ AVX512: '/arch:AVX2 /Ot'
+- MSVC + X86 CPU w/ AVX2: '/arch:AVX2 /Ot'
 - GCC + ARM CPU w/ Neon: '-flax-vector-conversions -march=armv8-a+simd -mfpu=neon -funsafe-math-optimizations -fbuiltin -O3'
 
 ### Example ececution results
