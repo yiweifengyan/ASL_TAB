@@ -11,12 +11,12 @@
 
 
 #ifdef CLANG
-// CLANG on Mac OS use popcntintrin.h
+// CLANG may use popcntintrin.h, but clang may share the same __builtin_popcountll(a) as GCC
 #include <popcntintrin.h>
 #define popcnt64(a)      _mm_popcnt_u64(a)
 #else
 #ifdef GCC
-// GCC on Linux uses the nmmintrin.h
+// GCC on GNU/Linux may use the nmmintrin.h and immintrin.h for x86_64 CPUs, no need to include them on ARM CPU
 #include <nmmintrin.h>
 #include <immintrin.h>
 #define popcnt64(a)       __builtin_popcountll(a)

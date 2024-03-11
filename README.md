@@ -1,8 +1,8 @@
 # ASL Spring 2024 Course Project: TAB Conv2d Optimization
 
-This is the baseline of TAB series Ternary And Binary convolution and quantization functions. It has been verified on MSVC/Windows with a X86 CPU, and probably works well on GCC/Linux and ARM CPU.
+This is the baseline of TAB series Ternary And Binary convolution and quantization functions. It implements a quantized version of Conv2d similar to [PyTorch Conv2d](https://pytorch.org/docs/stable/generated/torch.nn.Conv2d.html) without dilation, groups, and bias. It has been verified on MSVC/Windows with a X86 CPU and on GCC/Linux with an ARM CPU.
 
-It serves as a starting point. You can modify any part of it and add your own optimized versions, or reimplement all functions on your own.
+This repo serves as a starting point. You can modify any part of it and add your own optimized versions, or reimplement all functions on your own.
 
 ## File Organization
 
@@ -39,13 +39,13 @@ It serves as a starting point. You can modify any part of it and add your own op
 
 ### Tensor Shapes
 
-GEMM matrix shapes 
+GEMM matrix shapes
 
 - GEMM input a: *M, K*
 - GEMM input b: *N, K*
 - GEMM result y: *M, N*
 
-As the tensors in conv usually have 4 or 5 dimensions, the Conv-to-GEMM may use equivalent dimension transformation for tensor reshaping. So GEMM part only conducts the bitwise GEMM in a classical manner, and its implementation is decoupled from the convolution workflow. Sorry that GEMM uses MNK for dimension representation, these *N* and *K* are different/independent from the N and Kxx in the following convolution workflow.
+As the tensors in conv usually have 4 or 5 dimensions, the Conv-to-GEMM may use equivalent dimension transformation for tensor reshaping. So GEMM part only conducts the bitwise GEMM in a classical manner, and its implementation is decoupled from the convolution workflow. Sorry that GEMM uses *MNK* for dimension representation, these *N* and *K* are different/independent from the N and Kxx in the following convolution workflow.
 
 Activation X
 
@@ -75,14 +75,12 @@ Result Y
   - Can be viewed as N, OH, OW, OC (Output Channel = KN)
 - PReLU: N, OH, OW, OC
 
-
-
 ## First-try
 
 ### Setup
 
-- Change the popcnt64() intrinsic in common.h for GCC/Clang
-- Open the .sln in MSVC, or add a makefile for GCC/Clang
+- Change the popcnt64() intrinsic in common.h for GCC/Clang based on your CPU architecture
+- Open the .sln in MSVC, or add a makefile for GCC/Clang, or modify the CMakeLists.txt for cmake
 - Compile and run it
 
 The bitwise GEMM use popcnt instructions to accelerate quantized convolution. The excution speed will be very slow if current CPU don't have population count instructions.
@@ -99,15 +97,69 @@ Intrinsic references:
 
 ### Tested Configuration
 
-The MSVC/X86_64 version 
- - Windows 10
- - MS Visual Studio Community 2022
+The MSVC/X86_64 version
 
-The compiler flags in old TAB versions for reference
-- MSVC + X86 CPU w/ AVX2: '/arch:AVX2 /Ot'
-- GCC + ARM CPU w/ Neon: '-flax-vector-conversions -march=armv8-a+simd -mfpu=neon -funsafe-math-optimizations -fbuiltin -O3'
+- X86 CPU w/ AVX2
+- Windows 10
+- MS Visual Studio Community 2022
+- MSVC flags '/arch:AVX2 /Ot' (The baseline code can also run without these flags)
 
-### Example ececution results
+The GCC/ARM version
+
+- ARM CPU
+- Raspberry Pi OS based on Debian 12
+- cmake=3.25, gcc=12.2.0
+- Check the CMakeLists.txt for details. It also provides reference CMAKE_CXX_FLAGS for x86_64 CPU.
+
+### Example Execution Results
+
+Run it with cmake and gcc:
+```
+shaun@raspberrypi:~/Documents/ASL_TAB $ cmake ./
+-- The C compiler identification is GNU 12.2.0
+-- The CXX compiler identification is GNU 12.2.0
+-- Detecting C compiler ABI info
+-- Detecting C compiler ABI info - done
+-- Check for working C compiler: /usr/bin/cc - skipped
+-- Detecting C compile features
+-- Detecting C compile features - done
+-- Detecting CXX compiler ABI info
+-- Detecting CXX compiler ABI info - done
+-- Check for working CXX compiler: /usr/bin/c++ - skipped
+-- Detecting CXX compile features
+-- Detecting CXX compile features - done
+-- Configuring done
+-- Generating done
+-- Build files have been written to: /home/shaun/Documents/ASL_TAB
+shaun@raspberrypi:~/Documents/ASL_TAB $ make
+[ 20%] Building CXX object CMakeFiles/main.dir/TAB/GEMM.cpp.o
+[ 40%] Building CXX object CMakeFiles/main.dir/TAB/Quantize.cpp.o
+[ 60%] Building CXX object CMakeFiles/main.dir/TAB/TAB_CPU.cpp.o
+[ 80%] Building CXX object CMakeFiles/main.dir/TAB/main.cpp.o
+[100%] Linking CXX executable main
+[100%] Built target main
+shaun@raspberrypi:~/Documents/ASL_TAB $ ./main
+Test Case 0 kernel: 3X3 TAB_TNN Passed!
+Test Case 0 kernel: 3X3 TAB_TBN Passed!
+Test Case 0 kernel: 3X3 TAB_BTN Passed!
+Test Case 0 kernel: 3X3 TAB_BNN Passed!
+Test Case 1 kernel: 1X1 TAB_TNN Passed!
+Test Case 1 kernel: 1X1 TAB_TBN Passed!
+Test Case 1 kernel: 1X1 TAB_BTN Passed!
+Test Case 1 kernel: 1X1 TAB_BNN Passed!
+...
+Test Case 0 TAB_TNN Input NCHW=1,64,56,56, kernel: 64,64,3,3, y_size = 200704 Average execution time 10177712 ns
+Test Case 0 TAB_TBN Input NCHW=1,64,56,56, kernel: 64,64,3,3, y_size = 200704 Average execution time 10729742 ns
+Test Case 0 TAB_BTN Input NCHW=1,64,56,56, kernel: 64,64,3,3, y_size = 200704 Average execution time 10633321 ns
+Test Case 0 TAB_BNN Input NCHW=1,64,56,56, kernel: 64,64,3,3, y_size = 200704 Average execution time 10677954 ns
+Test Case 1 TAB_TNN Input NCHW=1,64,56,56, kernel: 128,64,3,3, y_size = 401408 Average execution time 19487269 ns
+Test Case 1 TAB_TBN Input NCHW=1,64,56,56, kernel: 128,64,3,3, y_size = 401408 Average execution time 19430507 ns
+Test Case 1 TAB_BTN Input NCHW=1,64,56,56, kernel: 128,64,3,3, y_size = 401408 Average execution time 19438475 ns
+Test Case 1 TAB_BNN Input NCHW=1,64,56,56, kernel: 128,64,3,3, y_size = 401408 Average execution time 19478004 ns
+...
+```
+
+Execution results on windows:
 
 ```
 Test Case 0 kernel: 3X3 TAB_TNN Passed!
