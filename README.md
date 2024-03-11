@@ -21,7 +21,7 @@ It serves as a starting point. You can modify any part of it and add your own op
   - Binarize_NCHW_to_NHWC(): Binarize the input tensor and reshape it from NCHW to NHWC.
   - BTN_CNT_W2(): BTN counts the Weight Bit2 with weight quantization.
 - Img2Row.h
-  - Img2Row_NHWCB_to_N_OHOW_KHKWC(): Reshape the 5-dimension NHWCB tensor into a 3-dimension N_OHxOW_KHxKWxC tensor.
+  - Img2Row_NHWCB_to_N_OHOW_KHKWC(): Reshape the 5-dimension NHWCB tensor into a 3-dimension (N, OH * OW, KH * KW * C) tensor. It can also be viewed as a 2-dim matrix in (N * OH * OW, KH * KW * C) for bitwise GEMM.
 - GEMM.h
 - GEMM.cpp
   - TNNGEMM_baseline(): Bitwise GEMM in TNN
@@ -29,23 +29,23 @@ It serves as a starting point. You can modify any part of it and add your own op
   - BTNGEMM_baseline()
   - BNNGEMM_baseline()
 - Activation.h
-  - PReLU(): A simple paramiterized leaky ReLU function
+  - PReLU(): A simple parameterized leaky ReLU function
 - utility.h
   - DirectPad(): The direct padding function for standard 32-bit float conv
   - DirectConv2d_FP32(): The direct conv function provides the reference correct conv results.
   - generate_array(): Generate ternary or binary tensors for Verify().
   - Compare_Tensor_NHWC(): Compare the conv result tensor for Verify().
-  - Compare_Tensor_BNN_Padding(): Compare the conv result tensor for Binary input (BNN & BTN). Zero padding is ineffective on binary (-1, +1) input activations, so this function only compares the central part of output tensor excluding the padding part.
+  - Compare_Tensor_BNN_Padding(): Compare the conv result tensor for Binary input (BNN & BTN). Zero padding is ineffective on binary (-1, +1) input activations, so this function only compares the central part of the output tensor excluding the padding part.
 
 ### Tensor Shapes
 
 GEMM matrix shapes 
 
-- GEMM input a: MK
-- GEMM input b: NK
-- GEMM result y: MN
+- GEMM input a: *M, K*
+- GEMM input b: *N, K*
+- GEMM result y: *M, N*
 
-As the tensors in conv usually have 4 or 5 dimensions, the Conv-to-GEMM may use equivalent dimension transformation for tensor reshaping. So GEMM part only conducts the bitwise GEMM in a classical manner, and its implementation is decoupled from the convolution workflow. Sorry that GEMM uses MNK for dimension representation, these N and K are different/independent from the N and Kxx in the following convolution workflow.
+As the tensors in conv usually have 4 or 5 dimensions, the Conv-to-GEMM may use equivalent dimension transformation for tensor reshaping. So GEMM part only conducts the bitwise GEMM in a classical manner, and its implementation is decoupled from the convolution workflow. Sorry that GEMM uses MNK for dimension representation, these *N* and *K* are different/independent from the N and Kxx in the following convolution workflow.
 
 Activation X
 
@@ -55,22 +55,22 @@ Activation X
   -  N, H + 2 * PaddingH, W + 2 * PaddingW, C/64, BITS (C and B can be fused together)
 - After Img2Row/Img2Col: N_OHOW_KNKWC
   - N, OH * OW, KH * kW * C * BITS. (C and BITS are fused. This C has been quantized)
-- In GEMM: 2-Dimension (MK)
+- In GEMM: 2-Dimension (*M, K*)
   -  N * OH * OW, KH * kW * C * BITS
-  -  (As GEMM input a: M = N * OH * OW, K = KH * kW * C * BITS)
+  -  (As GEMM input a: *M* = N * OH * OW, *K* = KH * kW * C * BITS)
 
 Weights W
 
 - Initial: KN, C, KH, KW
 - After Ternarize/Binarize: NHWCB
   - KN, KH, KW, C/64, BITS
-- In GEMM: 2-Dimension (NK)
+- In GEMM: 2-Dimension (*N, K*)
   - KN, KH * KW * C * BITS (This C has been quantized)
-  - (As GEMM input b: N = KN, K = KH * KW * C * BITS)
+  - (As GEMM input b: *N* = KN, *K* = KH * KW * C * BITS)
 
 Result Y
 
-- GEMM output: 2-Dimension (MN) = 4-Dimension (N, OH, OW, OC)
+- GEMM output: 2-Dimension (*M, N*) = 4-Dimension (N, OH, OW, OC)
   - N * OH * OW, OC (As GEMM output y)
   - Can be viewed as N, OH, OW, OC (Output Channel = KN)
 - PReLU: N, OH, OW, OC
