@@ -11,4 +11,4 @@ set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -flax-vector-conversions -march=armv8-a+
 # set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -msse4.1 -msse4.2 -mavx2 -mpopcnt -march=core-avx2 -O3")
 
 file(GLOB_RECURSE sources TAB/*.cpp TAB/*.h)
-add_executable(TAB ${sources})
+add_executable(main ${sources})
