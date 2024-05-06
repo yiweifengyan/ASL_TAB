@@ -172,7 +172,7 @@ int Benchmark(int Batch_Size) {
             std::vector<int64_t> run_time;
             for (int irun = 0; irun < RUN_TIMES; irun++) {
                 std::chrono:: high_resolution_clock::time_point start_time = std::chrono::high_resolution_clock::now();
-                std::vector<float> y = TAB_Conv(BX.data(), Q_Threshold.data(), QW.data(), BTN_CNT.data(), ConvType::BTN, p, p, s, s, Batch_Size, c, h, w, kn, kh, kw, ReLU_alpha);
+                std::vector<float> y = TAB_Conv(BX.data(), Q_Threshold.data(), QW.data(), BTN_CNT.data(), iconv, p, p, s, s, Batch_Size, c, h, w, kn, kh, kw, ReLU_alpha);
                 y_size = y.size();
                 std::chrono::high_resolution_clock::time_point end_time = std::chrono::high_resolution_clock::now();
                 std::chrono::nanoseconds duration_ns = end_time - start_time;
