@@ -4,6 +4,11 @@ This is the baseline of TAB series Ternary And Binary convolution and quantizati
 
 This repo serves as a starting point. You can modify any part of it and add your own optimized versions, or reimplement all functions on your own.
 
+## Bug fixes:
+ - Verify(): change OH and OW calculation referring to PyTorch Conv2d 
+ - Benchmark(): change TAB_Conv() augment ConvType::TBN to iconv
+ - TAB_Conv(): change OH and OW calculation referring to PyTorch Conv2d 
+
 ## File Organization
 
 - common.h
