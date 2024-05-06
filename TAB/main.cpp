@@ -92,8 +92,9 @@ int Verify() {
             // Compare the conv results to ensure the functions are correct
 
             int cmp;
-            int outh = (h + 2 * p - kh + 1) / s; // The output height of y
-            int outw = (w + 2 * p - kw + 1) / s; // The output width  of y
+            // change OH and OW calculation referring to PyTorch Conv2d 
+            int outh = (h + 2 * p - kh) / s + 1; // The output height of y
+            int outw = (w + 2 * p - kw) / s + 1; // The output width  of y
             if ((p > 0) && ((iconv == ConvType::BTN) || (iconv == ConvType::BNN))) 
                 // BTN and BNN regard the padded zeros as 1s because binary quantization only has (+1, -1) no zeros.
                 // So we only compare the central part of conv results here, excluding the zero padding part.
