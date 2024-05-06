@@ -28,8 +28,9 @@ std::vector<float> TAB_Conv(float * X, float * Q_Threshold, int64_t * QWeights, 
     int PackedH, PackedW, OH, OW, PackedC;
     PackedH = H + 2 * PaddingH; // Height after bit-packing
     PackedW = W + 2 * PaddingW; // Width  after bit-packing
-    OH = (PackedH - KH + 1) / StrideH; // Output Height
-    OW = (PackedW - KW + 1) / StrideW; // Output Width
+    // Referring to https://pytorch.org/docs/2.3/generated/torch.nn.Conv2d.html#conv2d
+    OH = (PackedH - KH) / StrideH + 1; // Output Height
+    OW = (PackedW - KW) / StrideW + 1; // Output Width
     PackedC = (C % cntbits) ? ((C / cntbits) + 1) : (C / cntbits); // The channel after bit-packing
     
     std::vector<int64_t> qx;
