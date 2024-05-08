@@ -4,10 +4,15 @@ This is the baseline of TAB series Ternary And Binary convolution and quantizati
 
 This repo serves as a starting point. You can modify any part of it and add your own optimized versions, or reimplement all functions on your own.
 
-## Bug fixes:
- - Verify(): change OH and OW calculation referring to PyTorch Conv2d 
- - Benchmark(): change TAB_Conv() augment ConvType::TBN to iconv
- - TAB_Conv(): change OH and OW calculation referring to PyTorch Conv2d 
+## Bug fixes (2024-05-08):
+
+- Change OH and OW calculation referring to PyTorch Conv2d, in the following functions
+  - Verify(): Line 96-97: int outh = (h + 2 * p - kh) / s + 1;
+  - TAB_Conv(): Line 32-33: OH = (PackedH - KH) / StrideH + 1;
+  - Img2Row(): Line 7-8: const int OH = (H - KH) / StrideH + 1;
+  - DirectConv2d()/utility.h Line 34-36: const int FH = (int)(OH / stride1) + 1;
+- Benchmark(): change TAB_Conv() augment ConvType::TBN to (ConvType) iconv
+- Verify() Line 33: Increase the quantization threshold from 1024 to 1640
 
 ## File Organization
 
@@ -185,22 +190,28 @@ Test Case 3 kernel: 3X3 TAB_BTN Passed!
 Test Case 3 kernel: 3X3 TAB_BNN Passed!
 ...
 Test Case 8 kernel: 1X1 TAB_BNN Passed!
-Test Case 0 TAB_TNN Input NCHW=16,64,56,56, kernel: 64,64,3,3, y_size = 3211264 Average execution time 30962860 ns
-Test Case 0 TAB_TBN Input NCHW=16,64,56,56, kernel: 64,64,3,3, y_size = 3211264 Average execution time 30888630 ns
-Test Case 0 TAB_BTN Input NCHW=16,64,56,56, kernel: 64,64,3,3, y_size = 3211264 Average execution time 30909680 ns
-Test Case 0 TAB_BNN Input NCHW=16,64,56,56, kernel: 64,64,3,3, y_size = 3211264 Average execution time 31426060 ns
-Test Case 1 TAB_TNN Input NCHW=16,64,56,56, kernel: 128,64,3,3, y_size = 6422528 Average execution time 50741800 ns
-Test Case 1 TAB_TBN Input NCHW=16,64,56,56, kernel: 128,64,3,3, y_size = 6422528 Average execution time 50860390 ns
-Test Case 1 TAB_BTN Input NCHW=16,64,56,56, kernel: 128,64,3,3, y_size = 6422528 Average execution time 50583730 ns
-Test Case 1 TAB_BNN Input NCHW=16,64,56,56, kernel: 128,64,3,3, y_size = 6422528 Average execution time 51339730 ns
-Test Case 2 TAB_TNN Input NCHW=16,128,28,28, kernel: 128,128,3,3, y_size = 1605632 Average execution time 23153320 ns
-Test Case 2 TAB_TBN Input NCHW=16,128,28,28, kernel: 128,128,3,3, y_size = 1605632 Average execution time 23116640 ns
-Test Case 2 TAB_BTN Input NCHW=16,128,28,28, kernel: 128,128,3,3, y_size = 1605632 Average execution time 23273820 ns
-Test Case 2 TAB_BNN Input NCHW=16,128,28,28, kernel: 128,128,3,3, y_size = 1605632 Average execution time 23153430 ns
-Test Case 3 TAB_TNN Input NCHW=16,128,28,28, kernel: 256,128,3,3, y_size = 3211264 Average execution time 41445580 ns
-Test Case 3 TAB_TBN Input NCHW=16,128,28,28, kernel: 256,128,3,3, y_size = 3211264 Average execution time 41529490 ns
-Test Case 3 TAB_BTN Input NCHW=16,128,28,28, kernel: 256,128,3,3, y_size = 3211264 Average execution time 41525410 ns
-Test Case 3 TAB_BNN Input NCHW=16,128,28,28, kernel: 256,128,3,3, y_size = 3211264 Average execution time 41495590 ns
+Test Case 0 TAB_TNN Input NCHW=1,64,56,56, kernel: 64,64,3,3, y_size = 200704 Average execution time 15209840 ns
+Test Case 0 TAB_TBN Input NCHW=1,64,56,56, kernel: 64,64,3,3, y_size = 200704 Average execution time 13334530 ns
+Test Case 0 TAB_BTN Input NCHW=1,64,56,56, kernel: 64,64,3,3, y_size = 200704 Average execution time 12406680 ns
+Test Case 0 TAB_BNN Input NCHW=1,64,56,56, kernel: 64,64,3,3, y_size = 200704 Average execution time 10494560 ns
+
+Test Case 1 TAB_TNN Input NCHW=1,64,56,56, kernel: 128,64,3,3, y_size = 401408 Average execution time 29672460 ns
+Test Case 1 TAB_TBN Input NCHW=1,64,56,56, kernel: 128,64,3,3, y_size = 401408 Average execution time 25905790 ns
+Test Case 1 TAB_BTN Input NCHW=1,64,56,56, kernel: 128,64,3,3, y_size = 401408 Average execution time 22858510 ns
+Test Case 1 TAB_BNN Input NCHW=1,64,56,56, kernel: 128,64,3,3, y_size = 401408 Average execution time 18747990 ns
+
+Test Case 2 TAB_TNN Input NCHW=1,128,28,28, kernel: 128,128,3,3, y_size = 100352 Average execution time 14122150 ns
+Test Case 2 TAB_TBN Input NCHW=1,128,28,28, kernel: 128,128,3,3, y_size = 100352 Average execution time 11947830 ns
+Test Case 2 TAB_BTN Input NCHW=1,128,28,28, kernel: 128,128,3,3, y_size = 100352 Average execution time 9827100 ns
+Test Case 2 TAB_BNN Input NCHW=1,128,28,28, kernel: 128,128,3,3, y_size = 100352 Average execution time 7388070 ns
+
+Test Case 3 TAB_TNN Input NCHW=1,128,28,28, kernel: 256,128,3,3, y_size = 200704 Average execution time 27561640 ns
+Test Case 3 TAB_TBN Input NCHW=1,128,28,28, kernel: 256,128,3,3, y_size = 200704 Average execution time 23477770 ns
+Test Case 3 TAB_BTN Input NCHW=1,128,28,28, kernel: 256,128,3,3, y_size = 200704 Average execution time 19514670 ns
+Test Case 3 TAB_BNN Input NCHW=1,128,28,28, kernel: 256,128,3,3, y_size = 200704 Average execution time 15946010 ns
 ...
-Test Case 19 TAB_BNN Input NCHW=16,16000,1,1, kernel: 32000,16000,1,1, y_size = 512000 Average execution time 361291720 ns
+Test Case 19 TAB_TNN Input NCHW=1,16000,1,1, kernel: 32000,16000,1,1, y_size = 32000 Average execution time 55426360 ns
+Test Case 19 TAB_TBN Input NCHW=1,16000,1,1, kernel: 32000,16000,1,1, y_size = 32000 Average execution time 43082960 ns
+Test Case 19 TAB_BTN Input NCHW=1,16000,1,1, kernel: 32000,16000,1,1, y_size = 32000 Average execution time 39498570 ns
+Test Case 19 TAB_BNN Input NCHW=1,16000,1,1, kernel: 32000,16000,1,1, y_size = 32000 Average execution time 27575520 ns
 ```

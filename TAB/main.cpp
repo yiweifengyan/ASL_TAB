@@ -18,7 +18,7 @@ int Verify() {
           32,  12, 16, 52,  1,  1, 0, 2,
           256, 56, 56, 10,  3,  3, 1, 1,
           160, 64, 56, 32,  3,  3, 0, 2, 
-          325, 36, 25, 125,  5,  7, 3, 4,
+          325, 36, 25, 125,  5,  7, 3, 4, 
           32,   1,  1, 120, 1,  1, 0, 1,
           512,  1,  1, 1024,1,  1, 0, 1,
           1024, 1,  1, 1640,1,  1, 2, 3,
@@ -30,7 +30,7 @@ int Verify() {
     std::vector<float> TW = generate_array(1024 * 1024 * 3 * 3, true);  // Ternary Weights: size = 51,380,224
     std::vector<float> BW = generate_array(1024 * 1024 * 3 * 3, false); // Binary Weights : size = 51,380,224
     std::vector<int64_t> QW; // Quantized Weights
-    std::vector<float> Q_Threshold = std::vector<float>(1024, 0.5); // Quantization threshold for ternarization
+    std::vector<float> Q_Threshold = std::vector<float>(1640, 0.5); // Quantization threshold for ternarization
 
     // Iterate on layer configurations
     for (int icase = 0; icase < CaseN; icase++) {
@@ -173,7 +173,7 @@ int Benchmark(int Batch_Size) {
             std::vector<int64_t> run_time;
             for (int irun = 0; irun < RUN_TIMES; irun++) {
                 std::chrono:: high_resolution_clock::time_point start_time = std::chrono::high_resolution_clock::now();
-                std::vector<float> y = TAB_Conv(BX.data(), Q_Threshold.data(), QW.data(), BTN_CNT.data(), iconv, p, p, s, s, Batch_Size, c, h, w, kn, kh, kw, ReLU_alpha);
+                std::vector<float> y = TAB_Conv(BX.data(), Q_Threshold.data(), QW.data(), BTN_CNT.data(), (ConvType) iconv, p, p, s, s, Batch_Size, c, h, w, kn, kh, kw, ReLU_alpha);
                 y_size = y.size();
                 std::chrono::high_resolution_clock::time_point end_time = std::chrono::high_resolution_clock::now();
                 std::chrono::nanoseconds duration_ns = end_time - start_time;

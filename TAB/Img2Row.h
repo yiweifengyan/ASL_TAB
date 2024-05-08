@@ -4,8 +4,8 @@
 template <typename T>
 std::vector<T> Img2Row_NHWCB_to_N_OHOW_KHKWC(T* X, int N, int C, int H, int W, int KH, int KW, int StrideH, int StrideW) {
 
-    const int OH = (H - KH + 1) / StrideH;
-    const int OW = (W - KW + 1) / StrideW;
+    const int OH = (H - KH) / StrideH + 1;
+    const int OW = (W - KW) / StrideW + 1;
     const int H1 = OH * OW;      // Fused Height
     const int W1 = KH * KW * C;  // Fused Width
     std::vector<T> y = std::vector<T>(N * H1 * W1);
