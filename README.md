@@ -125,6 +125,10 @@ The GCC/ARM version
 
 Run it with cmake and gcc:
 ```
+Changes in common.h for ARM CPU on Rpi:
+#define GCC
+// #include <nmmintrin.h>
+// #include <immintrin.h>
 shaun@raspberrypi:~/Documents/ASL_TAB $ cmake ./
 -- The C compiler identification is GNU 12.2.0
 -- The CXX compiler identification is GNU 12.2.0
@@ -158,14 +162,24 @@ Test Case 1 kernel: 1X1 TAB_TBN Passed!
 Test Case 1 kernel: 1X1 TAB_BTN Passed!
 Test Case 1 kernel: 1X1 TAB_BNN Passed!
 ...
-Test Case 0 TAB_TNN Input NCHW=1,64,56,56, kernel: 64,64,3,3, y_size = 200704 Average execution time 10177712 ns
-Test Case 0 TAB_TBN Input NCHW=1,64,56,56, kernel: 64,64,3,3, y_size = 200704 Average execution time 10729742 ns
-Test Case 0 TAB_BTN Input NCHW=1,64,56,56, kernel: 64,64,3,3, y_size = 200704 Average execution time 10633321 ns
-Test Case 0 TAB_BNN Input NCHW=1,64,56,56, kernel: 64,64,3,3, y_size = 200704 Average execution time 10677954 ns
-Test Case 1 TAB_TNN Input NCHW=1,64,56,56, kernel: 128,64,3,3, y_size = 401408 Average execution time 19487269 ns
-Test Case 1 TAB_TBN Input NCHW=1,64,56,56, kernel: 128,64,3,3, y_size = 401408 Average execution time 19430507 ns
-Test Case 1 TAB_BTN Input NCHW=1,64,56,56, kernel: 128,64,3,3, y_size = 401408 Average execution time 19438475 ns
-Test Case 1 TAB_BNN Input NCHW=1,64,56,56, kernel: 128,64,3,3, y_size = 401408 Average execution time 19478004 ns
+Test Case 8 kernel: 1X1 TAB_TNN Passed!
+Test Case 8 kernel: 1X1 TAB_TBN Passed!
+Test Case 8 kernel: 1X1 TAB_BTN Passed!
+Test Case 8 kernel: 1X1 TAB_BNN Passed!
+Test Case 0 TAB_TNN Input NCHW=1,64,56,56, kernel: 64,64,3,3, y_size = 200704 Average execution time 15380107 ns
+Test Case 0 TAB_TBN Input NCHW=1,64,56,56, kernel: 64,64,3,3, y_size = 200704 Average execution time 13850056 ns
+Test Case 0 TAB_BTN Input NCHW=1,64,56,56, kernel: 64,64,3,3, y_size = 200704 Average execution time 10610850 ns
+Test Case 0 TAB_BNN Input NCHW=1,64,56,56, kernel: 64,64,3,3, y_size = 200704 Average execution time 9815595 ns
+
+Test Case 1 TAB_TNN Input NCHW=1,64,56,56, kernel: 128,64,3,3, y_size = 401408 Average execution time 29454591 ns
+Test Case 1 TAB_TBN Input NCHW=1,64,56,56, kernel: 128,64,3,3, y_size = 401408 Average execution time 26165460 ns
+Test Case 1 TAB_BTN Input NCHW=1,64,56,56, kernel: 128,64,3,3, y_size = 401408 Average execution time 20003478 ns
+Test Case 1 TAB_BNN Input NCHW=1,64,56,56, kernel: 128,64,3,3, y_size = 401408 Average execution time 18154530 ns
+
+Test Case 2 TAB_TNN Input NCHW=1,128,28,28, kernel: 128,128,3,3, y_size = 100352 Average execution time 14147139 ns
+Test Case 2 TAB_TBN Input NCHW=1,128,28,28, kernel: 128,128,3,3, y_size = 100352 Average execution time 12171978 ns
+Test Case 2 TAB_BTN Input NCHW=1,128,28,28, kernel: 128,128,3,3, y_size = 100352 Average execution time 8944774 ns
+Test Case 2 TAB_BNN Input NCHW=1,128,28,28, kernel: 128,128,3,3, y_size = 100352 Average execution time 8174381 ns
 ...
 ```
 
